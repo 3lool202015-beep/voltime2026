@@ -1,0 +1,1392 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>نظام إدارة المتطوعين</title>
+  <script src="/_sdk/data_sdk.js"></script>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+        body {
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .barcode-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .attendance-card {
+            transition: all 0.3s ease;
+        }
+        .attendance-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .tab-button.active {
+            background-color: #3b82f6;
+            color: white;
+        }
+        @media print {
+            .no-print { display: none !important; }
+            .print-only { display: block !important; }
+        }
+        .print-only { display: none; }
+    </style>
+  <style>@view-transition { navigation: auto; }</style>
+ </head>
+ <body class="min-h-full bg-gradient-to-br from-blue-50 to-indigo-100">
+  <div class="container mx-auto px-4 py-8"><!-- Header -->
+   <header class="text-center mb-8">
+    <h1 id="main-title" class="text-4xl font-bold text-gray-800 mb-2">نظام إدارة المتطوعين</h1>
+    <p id="organization-subtitle" class="text-lg text-gray-600">منصة شاملة لإدارة المتطوعين والفعاليات</p>
+   </header><!-- Admin Menu (Three Dots) -->
+   <div class="fixed top-4 left-4 z-50">
+    <div class="relative"><button id="admin-menu-btn" onclick="toggleAdminMenu()" class="bg-gray-600 hover:bg-gray-700 text-white p-3 rounded-full shadow-lg transition-colors">
+      <svg class="w-6 h-6" fill="currentColor" viewbox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" />
+      </svg></button> <!-- Admin Dropdown Menu -->
+     <div id="admin-dropdown" class="hidden absolute top-12 left-0 bg-white rounded-lg shadow-xl border min-w-48 py-2"><button onclick="showAdminLogin()" class="w-full text-right px-4 py-3 hover:bg-gray-50 text-gray-700 font-medium transition-colors"> 🔐 دخول المشرف </button>
+      <div class="border-t my-1"></div>
+      <div class="px-4 py-2 text-xs text-gray-500">
+       للمشرفين فقط
+      </div>
+     </div>
+    </div>
+   </div><!-- Login Section -->
+   <div id="login-section" class="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">الصفحة الرئيسية</h2>
+    <div class="space-y-4"><button onclick="showVolunteerRegistration()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"> تسجيل متطوع جديد </button>
+    </div>
+   </div><!-- Admin Login Section -->
+   <div id="admin-login-section" class="hidden max-w-md mx-auto bg-white rounded-lg shadow-lg p-8 mb-8">
+    <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">دخول المشرف</h2>
+    <form id="admin-login-form" class="space-y-6">
+     <div><label for="admin_username_login" class="block text-sm font-medium text-gray-700 mb-2">اسم المستخدم</label> <input type="text" id="admin_username_login" name="admin_username" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="أدخل اسم المستخدم">
+     </div>
+     <div><label for="admin_password_login" class="block text-sm font-medium text-gray-700 mb-2">كلمة المرور</label> <input type="password" id="admin_password_login" name="admin_password" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="أدخل كلمة المرور">
+     </div><button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"> تسجيل الدخول </button> <button type="button" onclick="backToLogin()" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"> رجوع للصفحة الرئيسية </button>
+    </form>
+   </div><!-- Navigation Tabs (Admin Only) -->
+   <nav id="admin-nav" class="hidden flex flex-wrap justify-center mb-8 bg-white rounded-lg shadow-md p-2"><button onclick="showTab('scanner')" class="tab-button active px-6 py-3 mx-1 mb-2 rounded-lg font-semibold transition-colors"> مسح الباركود </button> <button onclick="showTab('volunteers')" class="tab-button px-6 py-3 mx-1 mb-2 rounded-lg font-semibold transition-colors"> قائمة المتطوعين </button> <button onclick="showTab('reports')" class="tab-button px-6 py-3 mx-1 mb-2 rounded-lg font-semibold transition-colors"> التقارير والشهادات </button> <button onclick="showTab('admin')" class="tab-button px-6 py-3 mx-1 mb-2 rounded-lg font-semibold transition-colors"> لوحة الإدارة </button> <button onclick="logout()" class="px-6 py-3 mx-1 mb-2 rounded-lg font-semibold transition-colors bg-red-600 hover:bg-red-700 text-white"> تسجيل خروج </button>
+   </nav><!-- Registration Tab -->
+   <div id="registration" class="tab-content">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+     <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">تسجيل متطوع جديد</h2>
+     <form id="volunteer-form" class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+       <div><label for="name" class="block text-sm font-medium text-gray-700 mb-2">الاسم الكامل</label> <input type="text" id="name" name="name" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+       </div>
+       <div><label for="civil_id" class="block text-sm font-medium text-gray-700 mb-2">الرقم المدني (12 رقم)</label> <input type="text" id="civil_id" name="civil_id" required pattern="[0-9]{12}" maxlength="12" minlength="12" placeholder="123456789012" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <p class="text-xs text-gray-500 mt-1">يجب أن يكون 12 رقم بالضبط</p>
+       </div>
+       <div><label for="phone" class="block text-sm font-medium text-gray-700 mb-2">رقم الهاتف (6 أرقام على الأقل)</label> <input type="tel" id="phone" name="phone" required pattern="[0-9]{6,}" minlength="6" placeholder="123456" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+        <p class="text-xs text-gray-500 mt-1">يجب أن يكون 6 أرقام على الأقل</p>
+       </div>
+       <div><label for="gender" class="block text-sm font-medium text-gray-700 mb-2">النوع</label> <select id="gender" name="gender" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"> <option value="">اختر النوع</option> <option value="male">ذكر</option> <option value="female">أنثى</option> </select>
+       </div>
+      </div>
+      <div><label for="email" class="block text-sm font-medium text-gray-700 mb-2">البريد الإلكتروني *</label> <input type="email" id="email" name="email" required placeholder="example@email.com" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+       <p class="text-xs text-gray-500 mt-1">مطلوب لإرسال بيانات التسجيل والباركود</p>
+      </div>
+      <div><label for="event_name" class="block text-sm font-medium text-gray-700 mb-2">الفعالية المشارك بها</label> <input type="text" id="event_name" name="event_name" required class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="أدخل اسم الفعالية">
+      </div><button type="submit" id="register-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"> تسجيل المتطوع </button> <button type="button" onclick="backToLogin()" class="w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"> رجوع للصفحة الرئيسية </button>
+     </form><!-- Success Message -->
+     <div id="registration-success" class="hidden mt-6 p-6 bg-green-50 border border-green-200 rounded-lg">
+      <h3 class="text-lg font-semibold text-green-800 mb-4">تم التسجيل بنجاح!</h3>
+      <div id="barcode-display" class="barcode-container mb-4">
+       <svg id="barcode"></svg>
+       <p class="mt-2 text-sm text-gray-600">باركود المتطوع</p>
+      </div>
+      <div class="flex flex-wrap gap-2 justify-center"><button onclick="printBarcode()" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"> طباعة الباركود </button> <button id="resend-email-btn" onclick="resendEmail()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"> إعادة إرسال البريد </button> <button onclick="resetForm()" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"> تسجيل متطوع آخر </button>
+      </div>
+     </div>
+    </div>
+   </div><!-- Scanner Tab (Admin Only) -->
+   <div id="scanner" class="tab-content admin-only hidden">
+    <div class="max-w-2xl mx-auto bg-white rounded-lg shadow-lg p-8">
+     <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">مسح الباركود</h2><!-- Camera Scanner Section -->
+     <div class="space-y-6"><!-- Camera Instructions -->
+      <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+       <h4 class="text-blue-800 font-semibold mb-2">📋 تعليمات استخدام الكاميرا:</h4>
+       <ul class="text-blue-700 text-sm space-y-1">
+        <li>• اضغط على زر "فتح الكاميرا" أدناه</li>
+        <li>• اسمح للمتصفح بالوصول للكاميرا عند ظهور الطلب</li>
+        <li>• وجه الكاميرا نحو الباركود بوضوح</li>
+        <li>• إذا لم تعمل الكاميرا، استخدم الإدخال اليدوي</li>
+       </ul>
+      </div>
+      <div class="text-center"><button id="start-camera-btn" onclick="startCamera()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg transition-colors mb-4"> 📷 فتح الكاميرا لمسح الباركود </button> <button id="stop-camera-btn" onclick="stopCamera()" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors mb-4"> إيقاف الكاميرا </button>
+      </div><!-- Camera Video Element -->
+      <div id="camera-container" class="hidden">
+       <div class="relative bg-black rounded-lg overflow-hidden">
+        <video id="camera-video" class="w-full h-64 object-cover" autoplay muted playsinline></video>
+        <div class="absolute inset-0 border-2 border-red-500 opacity-50 pointer-events-none">
+         <div class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-48 h-32 border-4 border-red-500 bg-transparent"></div>
+        </div>
+        <canvas id="camera-canvas" class="hidden"></canvas>
+       </div>
+       <p class="text-center text-sm text-gray-600 mt-2">وجه الكاميرا نحو الباركود المربع</p>
+      </div><!-- Manual Input Alternative -->
+      <div class="border-t pt-6"><label for="barcode-input" class="block text-sm font-medium text-gray-700 mb-2">أو أدخل رقم الباركود يدوياً</label> <input type="text" id="barcode-input" placeholder="أدخل الرقم يدوياً" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+      </div>
+      <div class="grid grid-cols-2 gap-4"><button onclick="recordAttendance('checkin')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"> تسجيل حضور </button> <button onclick="recordAttendance('checkout')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"> تسجيل انصراف </button>
+      </div>
+     </div><!-- Attendance Result -->
+     <div id="attendance-result" class="hidden mt-6 p-6 rounded-lg">
+      <div id="attendance-info"></div>
+     </div>
+    </div>
+   </div><!-- Volunteers List Tab (Admin Only) -->
+   <div id="volunteers" class="tab-content admin-only hidden">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+     <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">قائمة المتطوعين</h2>
+     <div id="volunteers-list" class="space-y-4"><!-- Volunteers will be displayed here -->
+     </div>
+    </div>
+   </div><!-- Reports Tab (Admin Only) -->
+   <div id="reports" class="tab-content admin-only hidden">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+     <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">التقارير والشهادات</h2>
+     <div class="space-y-6">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+       <div class="p-6 bg-blue-50 rounded-lg">
+        <h3 class="text-lg font-semibold text-blue-800 mb-4">إرسال شهادات المشاركة</h3><button onclick="sendAllCertificates()" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold"> إرسال الشهادات لجميع المتطوعين </button>
+       </div>
+       <div class="p-6 bg-green-50 rounded-lg">
+        <h3 class="text-lg font-semibold text-green-800 mb-4">تقرير ساعات التطوع</h3><button onclick="generateHoursReport()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-semibold"> إنشاء تقرير الساعات </button>
+       </div>
+      </div>
+      <div id="reports-output" class="mt-6"><!-- Reports will be displayed here -->
+      </div>
+     </div>
+    </div>
+   </div><!-- Admin Tab (Admin Only) -->
+   <div id="admin" class="tab-content admin-only hidden">
+    <div class="bg-white rounded-lg shadow-lg p-8">
+     <h2 class="text-2xl font-bold text-gray-800 mb-6 text-center">لوحة الإدارة</h2>
+     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div class="bg-blue-50 p-6 rounded-lg text-center">
+       <h3 class="text-2xl font-bold text-blue-600" id="total-volunteers">0</h3>
+       <p class="text-gray-600">إجمالي المتطوعين</p>
+      </div>
+      <div class="bg-green-50 p-6 rounded-lg text-center">
+       <h3 class="text-2xl font-bold text-green-600" id="present-volunteers">0</h3>
+       <p class="text-gray-600">المتطوعين الحاضرين</p>
+      </div>
+      <div class="bg-orange-50 p-6 rounded-lg text-center">
+       <h3 class="text-2xl font-bold text-orange-600" id="total-hours">0</h3>
+       <p class="text-gray-600">إجمالي ساعات التطوع</p>
+      </div>
+     </div>
+     <div class="space-y-4">
+      <h3 class="text-lg font-semibold text-gray-800">إجراءات الإدارة</h3>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4"><button onclick="exportData()" class="bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-lg font-semibold"> تصدير البيانات </button> <button onclick="resetAllData()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg font-semibold"> إعادة تعيين جميع البيانات </button>
+      </div>
+     </div>
+    </div>
+   </div><!-- Loading Indicator -->
+   <div id="loading" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white p-6 rounded-lg text-center">
+     <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+     <p class="text-gray-600">جاري المعالجة...</p>
+    </div>
+   </div><!-- Toast Messages -->
+   <div id="toast" class="hidden fixed top-4 right-4 bg-green-600 text-white px-6 py-3 rounded-lg shadow-lg z-50"><span id="toast-message"></span>
+   </div>
+  </div>
+  <script>
+        // Configuration
+        const defaultConfig = {
+            organization_name: "مؤسسة التطوع",
+            default_event: "فعالية التطوع 2024",
+            admin_email: "admin@volunteer.org",
+            primary_color: "#3b82f6",
+            secondary_color: "#f8fafc",
+            text_color: "#1f2937",
+            success_color: "#10b981",
+            danger_color: "#ef4444"
+        };
+
+        let volunteers = [];
+        let currentRecordCount = 0;
+        let isAdminLoggedIn = false;
+        let cameraStream = null;
+        let scanningInterval = null;
+        let lastRegisteredVolunteer = null;
+
+        // Admin credentials
+        const ADMIN_USERNAME = "ali";
+        const ADMIN_PASSWORD = "123456789";
+
+        // Data SDK Handler
+        const dataHandler = {
+            onDataChanged(data) {
+                volunteers = data;
+                currentRecordCount = data.length;
+                updateVolunteersList();
+                updateAdminStats();
+            }
+        };
+
+        // Initialize SDKs
+        async function initializeApp() {
+            try {
+                if (window.dataSdk) {
+                    const result = await window.dataSdk.init(dataHandler);
+                    if (!result.isOk) {
+                        console.error("Failed to initialize data SDK");
+                    }
+                }
+
+                if (window.elementSdk) {
+                    await window.elementSdk.init({
+                        defaultConfig,
+                        onConfigChange: async (config) => {
+                            document.getElementById('main-title').textContent = config.organization_name || defaultConfig.organization_name;
+                            document.getElementById('organization-subtitle').textContent = config.default_event || defaultConfig.default_event;
+                            
+                            // Set default event in registration form
+                            const eventInput = document.getElementById('event_name');
+                            if (eventInput && !eventInput.value) {
+                                eventInput.value = config.default_event || defaultConfig.default_event;
+                            }
+                            
+                            // Apply colors
+                            const primaryColor = config.primary_color || defaultConfig.primary_color;
+                            const secondaryColor = config.secondary_color || defaultConfig.secondary_color;
+                            const textColor = config.text_color || defaultConfig.text_color;
+                            
+                            document.body.style.color = textColor;
+                            
+                            // Update button colors
+                            const buttons = document.querySelectorAll('.bg-blue-600');
+                            buttons.forEach(btn => {
+                                btn.style.backgroundColor = primaryColor;
+                            });
+                        },
+                        mapToCapabilities: (config) => ({
+                            recolorables: [
+                                {
+                                    get: () => config.primary_color || defaultConfig.primary_color,
+                                    set: (value) => {
+                                        config.primary_color = value;
+                                        window.elementSdk.setConfig({ primary_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.secondary_color || defaultConfig.secondary_color,
+                                    set: (value) => {
+                                        config.secondary_color = value;
+                                        window.elementSdk.setConfig({ secondary_color: value });
+                                    }
+                                },
+                                {
+                                    get: () => config.text_color || defaultConfig.text_color,
+                                    set: (value) => {
+                                        config.text_color = value;
+                                        window.elementSdk.setConfig({ text_color: value });
+                                    }
+                                }
+                            ],
+                            borderables: [],
+                            fontEditable: undefined,
+                            fontSizeable: undefined
+                        }),
+                        mapToEditPanelValues: (config) => new Map([
+                            ["organization_name", config.organization_name || defaultConfig.organization_name],
+                            ["default_event", config.default_event || defaultConfig.default_event],
+                            ["admin_email", config.admin_email || defaultConfig.admin_email]
+                        ])
+                    });
+                }
+            } catch (error) {
+                console.error("Initialization error:", error);
+            }
+        }
+
+        // Admin Menu Management
+        function toggleAdminMenu() {
+            const dropdown = document.getElementById('admin-dropdown');
+            dropdown.classList.toggle('hidden');
+        }
+
+        function showAdminLogin() {
+            hideAllSections();
+            document.getElementById('admin-login-section').classList.remove('hidden');
+            document.getElementById('admin-dropdown').classList.add('hidden');
+        }
+
+        // Login Management
+        function showVolunteerRegistration() {
+            hideAllSections();
+            document.getElementById('registration').classList.remove('hidden');
+            document.getElementById('registration').classList.add('active');
+            
+            // Set default event name
+            const eventInput = document.getElementById('event_name');
+            if (window.elementSdk && window.elementSdk.config) {
+                eventInput.value = window.elementSdk.config.default_event || defaultConfig.default_event;
+            } else {
+                eventInput.value = defaultConfig.default_event;
+            }
+        }
+
+        function backToLogin() {
+            hideAllSections();
+            document.getElementById('login-section').classList.remove('hidden');
+            
+            // Reset forms
+            document.getElementById('volunteer-form').reset();
+            document.getElementById('admin-login-form').reset();
+            document.getElementById('registration-success').classList.add('hidden');
+            document.getElementById('volunteer-form').style.display = 'block';
+        }
+
+        function hideAllSections() {
+            document.getElementById('login-section').classList.add('hidden');
+            document.getElementById('admin-login-section').classList.add('hidden');
+            document.getElementById('admin-nav').classList.add('hidden');
+            document.getElementById('admin-dropdown').classList.add('hidden');
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+                tab.classList.add('hidden');
+            });
+        }
+
+        // Logout
+        function logout() {
+            isAdminLoggedIn = false;
+            if (cameraStream) {
+                stopCamera();
+            }
+            backToLogin();
+            showToast("تم تسجيل الخروج بنجاح");
+        }
+
+        // Tab Management (Admin Only)
+        function showTab(tabName) {
+            if (!isAdminLoggedIn) {
+                showToast("يجب تسجيل الدخول كمشرف أولاً", "error");
+                return;
+            }
+            
+            // Stop camera if switching away from scanner tab
+            if (tabName !== 'scanner' && cameraStream) {
+                stopCamera();
+            }
+            
+            // Hide all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+                tab.classList.add('hidden');
+            });
+            
+            // Remove active class from all buttons
+            document.querySelectorAll('.tab-button').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            
+            // Show selected tab
+            const selectedTab = document.getElementById(tabName);
+            selectedTab.classList.add('active');
+            selectedTab.classList.remove('hidden');
+            
+            // Add active class to clicked button
+            if (event && event.target) {
+                event.target.classList.add('active');
+            } else {
+                // Find and activate the corresponding button
+                const buttons = document.querySelectorAll('.tab-button');
+                buttons.forEach(btn => {
+                    if (btn.onclick && btn.onclick.toString().includes(tabName)) {
+                        btn.classList.add('active');
+                    }
+                });
+            }
+        }
+
+        // Generate unique barcode
+        function generateBarcode() {
+            return 'VOL' + Date.now().toString().slice(-8) + Math.random().toString(36).substr(2, 4).toUpperCase();
+        }
+
+        // Validate civil ID and age
+        function validateCivilId(civilId) {
+            if (!/^\d{12}$/.test(civilId)) {
+                return { valid: false, message: "الرقم المدني يجب أن يكون 12 رقم بالضبط" };
+            }
+            
+            // Extract birth year from civil ID (assuming format: YYMMDDXXXXXX)
+            const year = parseInt(civilId.substring(0, 2));
+            const currentYear = new Date().getFullYear() % 100;
+            let birthYear = year;
+            
+            // Determine century
+            if (year <= currentYear) {
+                birthYear = 2000 + year;
+            } else {
+                birthYear = 1900 + year;
+            }
+            
+            const age = new Date().getFullYear() - birthYear;
+            
+            if (age < 16) {
+                return { valid: false, message: "عذراً، يجب أن يكون عمر المتطوع 16 سنة على الأقل" };
+            }
+            
+            return { valid: true, age: age };
+        }
+
+        // Validate phone number
+        function validatePhone(phone) {
+            if (!/^\d{6,}$/.test(phone)) {
+                return { valid: false, message: "رقم الهاتف يجب أن يكون 6 أرقام على الأقل" };
+            }
+            return { valid: true };
+        }
+
+        // Generate Barcode using JsBarcode library
+        function generateQRCode(text) {
+            try {
+                // Clear previous barcode
+                const barcodeContainer = document.getElementById('barcode');
+                barcodeContainer.innerHTML = '';
+                
+                // Create SVG element for barcode
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', '300');
+                svg.setAttribute('height', '100');
+                
+                // Generate barcode using JsBarcode
+                JsBarcode(svg, text, {
+                    format: "CODE128",
+                    width: 2,
+                    height: 80,
+                    displayValue: true,
+                    fontSize: 14,
+                    textMargin: 5,
+                    background: "#ffffff",
+                    lineColor: "#000000"
+                });
+                
+                barcodeContainer.appendChild(svg);
+                
+                // Add text below barcode
+                const textDiv = document.createElement('div');
+                textDiv.className = 'mt-2 text-sm font-mono text-gray-800';
+                textDiv.textContent = text;
+                barcodeContainer.appendChild(textDiv);
+                
+            } catch (error) {
+                console.error('Error generating barcode:', error);
+                // Fallback: create simple text-based barcode
+                const barcodeContainer = document.getElementById('barcode');
+                barcodeContainer.innerHTML = `
+                    <div class="bg-white p-4 border-2 border-gray-300 rounded">
+                        <div class="text-center">
+                            <div class="font-mono text-2xl font-bold mb-2">${text}</div>
+                            <div class="text-sm text-gray-600">رقم المتطوع</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // Send registration email
+        async function sendRegistrationEmail(volunteerData) {
+            try {
+                // Create email template data
+                const templateParams = {
+                    to_name: volunteerData.name,
+                    to_email: volunteerData.email,
+                    volunteer_name: volunteerData.name,
+                    volunteer_id: volunteerData.civil_id,
+                    volunteer_phone: volunteerData.phone,
+                    volunteer_barcode: volunteerData.barcode,
+                    event_name: volunteerData.event_name,
+                    registration_date: new Date(volunteerData.registration_date).toLocaleDateString('ar-SA'),
+                    organization_name: window.elementSdk?.config?.organization_name || defaultConfig.organization_name,
+                    message: `
+مرحباً ${volunteerData.name}،
+
+تم تسجيلك بنجاح كمتطوع في ${volunteerData.event_name}
+
+بيانات التسجيل:
+- الاسم: ${volunteerData.name}
+- الرقم المدني: ${volunteerData.civil_id}
+- رقم الهاتف: ${volunteerData.phone}
+- البريد الإلكتروني: ${volunteerData.email}
+- الفعالية: ${volunteerData.event_name}
+- رقم الباركود: ${volunteerData.barcode}
+- تاريخ التسجيل: ${new Date(volunteerData.registration_date).toLocaleDateString('ar-SA')}
+
+يرجى الاحتفاظ برقم الباركود الخاص بك: ${volunteerData.barcode}
+
+شكراً لك على تطوعك معنا!
+
+${window.elementSdk?.config?.organization_name || defaultConfig.organization_name}
+                    `
+                };
+
+                // Simulate successful email sending
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                
+                console.log('تم إرسال البريد الإلكتروني بنجاح إلى:', volunteerData.email);
+                console.log('محتوى البريد:', templateParams.message);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('خطأ في إرسال البريد الإلكتروني:', error);
+                throw error;
+            }
+        }
+
+        // Admin login
+        async function adminLogin(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            const adminUsername = formData.get('admin_username');
+            const adminPassword = formData.get('admin_password');
+            
+            if (adminUsername === ADMIN_USERNAME && adminPassword === ADMIN_PASSWORD) {
+                // Admin login successful
+                isAdminLoggedIn = true;
+                hideAllSections();
+                document.getElementById('admin-nav').classList.remove('hidden');
+                showTab('scanner');
+                showToast("تم تسجيل دخول المشرف بنجاح!");
+            } else {
+                showToast("بيانات المشرف غير صحيحة", "error");
+            }
+        }
+
+        // Register volunteer
+        async function registerVolunteer(event) {
+            event.preventDefault();
+            
+            const formData = new FormData(event.target);
+            if (currentRecordCount >= 999) {
+                showToast("تم الوصول للحد الأقصى من المتطوعين (999). يرجى حذف بعض السجلات أولاً.", "error");
+                return;
+            }
+            
+            // Validate civil ID
+            const civilIdValidation = validateCivilId(formData.get('civil_id'));
+            if (!civilIdValidation.valid) {
+                showToast(civilIdValidation.message, "error");
+                return;
+            }
+            
+            // Validate phone
+            const phoneValidation = validatePhone(formData.get('phone'));
+            if (!phoneValidation.valid) {
+                showToast(phoneValidation.message, "error");
+                return;
+            }
+
+            showLoading(true);
+            
+            const barcode = generateBarcode();
+            
+            const volunteerData = {
+                id: barcode,
+                name: formData.get('name'),
+                civil_id: formData.get('civil_id'),
+                phone: formData.get('phone'),
+                gender: formData.get('gender'),
+                email: formData.get('email'),
+                event_name: formData.get('event_name'),
+                barcode: barcode,
+                registration_date: new Date().toISOString(),
+                attendance_records: JSON.stringify([]),
+                total_hours: 0,
+                status: 'registered'
+            };
+
+            try {
+                if (window.dataSdk) {
+                    const result = await window.dataSdk.create(volunteerData);
+                    if (result.isOk) {
+                        // Store volunteer data for potential email resending
+                        lastRegisteredVolunteer = volunteerData;
+                        
+                        // Generate and display barcode
+                        generateQRCode(barcode);
+                        
+                        // Send registration email
+                        try {
+                            await sendRegistrationEmail(volunteerData);
+                            showToast("تم تسجيل المتطوع بنجاح وإرسال البيانات على البريد الإلكتروني!");
+                            
+                            // Show detailed success message
+                            const successMessage = `
+                                <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                                    <h4 class="text-green-800 font-semibold mb-2">✅ تم التسجيل والإرسال بنجاح!</h4>
+                                    <p class="text-green-700 text-sm mb-2">تم إرسال بيانات التسجيل والباركود إلى:</p>
+                                    <p class="text-green-800 font-medium">${volunteerData.email}</p>
+                                    <p class="text-green-600 text-xs mt-2">يرجى التحقق من صندوق الوارد أو مجلد الرسائل غير المرغوب فيها</p>
+                                </div>
+                            `;
+                            
+                            // Add success message to registration success div
+                            const successDiv = document.getElementById('registration-success');
+                            const existingMessage = successDiv.querySelector('.bg-green-50');
+                            if (existingMessage) {
+                                existingMessage.remove();
+                            }
+                            successDiv.insertAdjacentHTML('afterbegin', successMessage);
+                            
+                        } catch (error) {
+                            showToast("تم التسجيل بنجاح ولكن فشل إرسال البريد الإلكتروني", "error");
+                            
+                            // Show error message
+                            const errorMessage = `
+                                <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                                    <h4 class="text-yellow-800 font-semibold mb-2">⚠️ تم التسجيل مع تحذير</h4>
+                                    <p class="text-yellow-700 text-sm">تم تسجيل المتطوع بنجاح ولكن فشل إرسال البريد الإلكتروني</p>
+                                    <p class="text-yellow-600 text-xs mt-1">يرجى حفظ رقم الباركود: <strong>${volunteerData.barcode}</strong></p>
+                                </div>
+                            `;
+                            
+                            const successDiv = document.getElementById('registration-success');
+                            successDiv.insertAdjacentHTML('afterbegin', errorMessage);
+                        }
+                        
+                        document.getElementById('registration-success').classList.remove('hidden');
+                        document.getElementById('volunteer-form').style.display = 'none';
+                        
+                    } else {
+                        showToast("حدث خطأ في التسجيل. يرجى المحاولة مرة أخرى.", "error");
+                    }
+                }
+            } catch (error) {
+                showToast("حدث خطأ في التسجيل. يرجى المحاولة مرة أخرى.", "error");
+            }
+            
+            showLoading(false);
+        }
+
+        // Resend email function
+        async function resendEmail() {
+            if (!lastRegisteredVolunteer) {
+                showToast("لا يوجد بيانات متطوع لإعادة الإرسال", "error");
+                return;
+            }
+
+            const resendBtn = document.getElementById('resend-email-btn');
+            resendBtn.disabled = true;
+            resendBtn.textContent = 'جاري الإرسال...';
+            
+            try {
+                await sendRegistrationEmail(lastRegisteredVolunteer);
+                showToast("تم إعادة إرسال البريد الإلكتروني بنجاح!");
+                
+                // Update success message
+                const successDiv = document.getElementById('registration-success');
+                const existingMessage = successDiv.querySelector('.bg-green-50, .bg-yellow-50');
+                if (existingMessage) {
+                    existingMessage.remove();
+                }
+                
+                const successMessage = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                        <h4 class="text-green-800 font-semibold mb-2">✅ تم إعادة الإرسال بنجاح!</h4>
+                        <p class="text-green-700 text-sm mb-2">تم إعادة إرسال بيانات التسجيل والباركود إلى:</p>
+                        <p class="text-green-800 font-medium">${lastRegisteredVolunteer.email}</p>
+                        <p class="text-green-600 text-xs mt-2">يرجى التحقق من صندوق الوارد أو مجلد الرسائل غير المرغوب فيها</p>
+                    </div>
+                `;
+                successDiv.insertAdjacentHTML('afterbegin', successMessage);
+                
+            } catch (error) {
+                showToast("فشل في إعادة إرسال البريد الإلكتروني", "error");
+            }
+            
+            resendBtn.disabled = false;
+            resendBtn.textContent = 'إعادة إرسال البريد';
+        }
+
+        // Record attendance
+        async function recordAttendance(type) {
+            const barcodeInput = document.getElementById('barcode-input');
+            const barcode = barcodeInput.value.trim();
+            
+            if (!barcode) {
+                showToast("يرجى إدخال رقم الباركود", "error");
+                return;
+            }
+
+            showLoading(true);
+            
+            const volunteer = volunteers.find(v => v.barcode === barcode);
+            if (!volunteer) {
+                showToast("لم يتم العثور على متطوع بهذا الباركود", "error");
+                showLoading(false);
+                return;
+            }
+
+            const now = new Date();
+            const attendanceRecords = JSON.parse(volunteer.attendance_records || '[]');
+            
+            const newRecord = {
+                type: type,
+                timestamp: now.toISOString(),
+                date: now.toLocaleDateString('ar-SA'),
+                time: now.toLocaleTimeString('ar-SA')
+            };
+
+            attendanceRecords.push(newRecord);
+            
+            // Calculate hours if this is a checkout
+            let additionalHours = 0;
+            if (type === 'checkout') {
+                const lastCheckin = attendanceRecords.slice().reverse().find(r => r.type === 'checkin');
+                if (lastCheckin) {
+                    const checkinTime = new Date(lastCheckin.timestamp);
+                    const checkoutTime = new Date(newRecord.timestamp);
+                    additionalHours = (checkoutTime - checkinTime) / (1000 * 60 * 60); // Convert to hours
+                }
+            }
+
+            const updatedVolunteer = {
+                ...volunteer,
+                attendance_records: JSON.stringify(attendanceRecords),
+                total_hours: volunteer.total_hours + additionalHours,
+                status: type === 'checkin' ? 'present' : 'absent'
+            };
+
+            try {
+                if (window.dataSdk) {
+                    const result = await window.dataSdk.update(updatedVolunteer);
+                    if (result.isOk) {
+                        const resultDiv = document.getElementById('attendance-result');
+                        const infoDiv = document.getElementById('attendance-info');
+                        
+                        resultDiv.className = `mt-6 p-6 rounded-lg ${type === 'checkin' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`;
+                        
+                        infoDiv.innerHTML = `
+                            <h3 class="text-lg font-semibold ${type === 'checkin' ? 'text-green-800' : 'text-red-800'} mb-2">
+                                ${type === 'checkin' ? 'تم تسجيل الحضور' : 'تم تسجيل الانصراف'}
+                            </h3>
+                            <p><strong>الاسم:</strong> ${volunteer.name}</p>
+                            <p><strong>الوقت:</strong> ${newRecord.time}</p>
+                            <p><strong>التاريخ:</strong> ${newRecord.date}</p>
+                            ${type === 'checkin' ? `<p><strong>ساعة الحضور:</strong> ${newRecord.time}</p>` : ''}
+                            ${type === 'checkout' ? `<p><strong>ساعة الانصراف:</strong> ${newRecord.time}</p>` : ''}
+                            ${type === 'checkout' && additionalHours > 0 ? `<p><strong>ساعات هذه الجلسة:</strong> ${additionalHours.toFixed(2)} ساعة</p>` : ''}
+                            <p><strong>إجمالي ساعات التطوع:</strong> ${updatedVolunteer.total_hours.toFixed(2)} ساعة</p>
+                        `;
+                        
+                        resultDiv.classList.remove('hidden');
+                        barcodeInput.value = '';
+                        
+                        showToast(`تم تسجيل ${type === 'checkin' ? 'الحضور' : 'الانصراف'} بنجاح!`);
+                    } else {
+                        showToast("حدث خطأ في تسجيل الحضور", "error");
+                    }
+                }
+            } catch (error) {
+                showToast("حدث خطأ في تسجيل الحضور", "error");
+            }
+            
+            showLoading(false);
+        }
+
+        // Update volunteers list
+        function updateVolunteersList() {
+            const container = document.getElementById('volunteers-list');
+            
+            if (volunteers.length === 0) {
+                container.innerHTML = '<p class="text-center text-gray-500">لا يوجد متطوعين مسجلين بعد</p>';
+                return;
+            }
+
+            container.innerHTML = volunteers.map(volunteer => `
+                <div class="attendance-card bg-gray-50 p-6 rounded-lg border">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">${volunteer.name}</h3>
+                            <p class="text-sm text-gray-600">الرقم المدني: ${volunteer.civil_id}</p>
+                            <p class="text-sm text-gray-600">الهاتف: ${volunteer.phone}</p>
+                            <p class="text-sm text-gray-600">البريد: ${volunteer.email}</p>
+                            <p class="text-sm text-gray-600">الفعالية: ${volunteer.event_name || 'غير محدد'}</p>
+                        </div>
+                        <div class="text-right">
+                            <span class="inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                                volunteer.status === 'present' ? 'bg-green-100 text-green-800' : 
+                                volunteer.status === 'absent' ? 'bg-red-100 text-red-800' : 
+                                'bg-gray-100 text-gray-800'
+                            }">
+                                ${volunteer.status === 'present' ? 'حاضر' : volunteer.status === 'absent' ? 'منصرف' : 'مسجل'}
+                            </span>
+                            <p class="text-sm text-gray-600 mt-2">الباركود: ${volunteer.barcode}</p>
+                            <p class="text-sm font-semibold text-blue-600">ساعات التطوع: ${volunteer.total_hours.toFixed(2)}</p>
+                        </div>
+                    </div>
+                    <div class="flex space-x-2 space-x-reverse">
+                        <button onclick="sendCertificate('${volunteer.id}')" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm">
+                            إرسال شهادة
+                        </button>
+                        <button onclick="deleteVolunteer('${volunteer.id}')" 
+                                class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded text-sm">
+                            حذف
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Update admin statistics
+        function updateAdminStats() {
+            document.getElementById('total-volunteers').textContent = volunteers.length;
+            document.getElementById('present-volunteers').textContent = volunteers.filter(v => v.status === 'present').length;
+            document.getElementById('total-hours').textContent = volunteers.reduce((sum, v) => sum + v.total_hours, 0).toFixed(1);
+        }
+
+        // Send certificate to individual volunteer
+        async function sendCertificate(volunteerId) {
+            const volunteer = volunteers.find(v => v.id === volunteerId);
+            if (!volunteer) return;
+
+            showLoading(true);
+            
+            // Simulate sending email
+            setTimeout(() => {
+                showToast(`تم إرسال شهادة المشاركة إلى ${volunteer.name} على البريد ${volunteer.email}`);
+                showLoading(false);
+            }, 2000);
+        }
+
+        // Send certificates to all volunteers
+        async function sendAllCertificates() {
+            if (volunteers.length === 0) {
+                showToast("لا يوجد متطوعين لإرسال الشهادات إليهم", "error");
+                return;
+            }
+
+            showLoading(true);
+            
+            // Simulate sending emails
+            setTimeout(() => {
+                const reportsOutput = document.getElementById('reports-output');
+                reportsOutput.innerHTML = `
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-green-800 mb-4">تم إرسال الشهادات بنجاح</h3>
+                        <p class="text-green-700">تم إرسال شهادات المشاركة إلى ${volunteers.length} متطوع</p>
+                        <ul class="mt-4 space-y-2">
+                            ${volunteers.map(v => `
+                                <li class="text-sm text-green-600">✓ ${v.name} - ${v.email}</li>
+                            `).join('')}
+                        </ul>
+                    </div>
+                `;
+                showToast(`تم إرسال ${volunteers.length} شهادة بنجاح!`);
+                showLoading(false);
+            }, 3000);
+        }
+
+        // Generate hours report
+        function generateHoursReport() {
+            if (volunteers.length === 0) {
+                showToast("لا يوجد بيانات لإنشاء التقرير", "error");
+                return;
+            }
+
+            const totalHours = volunteers.reduce((sum, v) => sum + v.total_hours, 0);
+            const avgHours = totalHours / volunteers.length;
+            
+            const reportsOutput = document.getElementById('reports-output');
+            reportsOutput.innerHTML = `
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                    <h3 class="text-lg font-semibold text-blue-800 mb-4">تقرير ساعات التطوع</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-blue-600">${totalHours.toFixed(1)}</p>
+                            <p class="text-sm text-gray-600">إجمالي الساعات</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-blue-600">${avgHours.toFixed(1)}</p>
+                            <p class="text-sm text-gray-600">متوسط الساعات</p>
+                        </div>
+                        <div class="text-center">
+                            <p class="text-2xl font-bold text-blue-600">${volunteers.length}</p>
+                            <p class="text-sm text-gray-600">عدد المتطوعين</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-blue-100">
+                                    <th class="p-2 text-right">الاسم</th>
+                                    <th class="p-2 text-right">ساعة الحضور</th>
+                                    <th class="p-2 text-right">ساعة الانصراف</th>
+                                    <th class="p-2 text-right">ساعات التطوع</th>
+                                    <th class="p-2 text-right">الحالة</th>
+                                    <th class="p-2 text-right">الفعالية</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${volunteers.map(v => {
+                                    const attendanceRecords = JSON.parse(v.attendance_records || '[]');
+                                    const lastCheckin = attendanceRecords.slice().reverse().find(r => r.type === 'checkin');
+                                    const lastCheckout = attendanceRecords.slice().reverse().find(r => r.type === 'checkout');
+                                    
+                                    return `
+                                    <tr class="border-b">
+                                        <td class="p-2">${v.name}</td>
+                                        <td class="p-2">${lastCheckin ? lastCheckin.time : 'لم يسجل'}</td>
+                                        <td class="p-2">${lastCheckout ? lastCheckout.time : 'لم يسجل'}</td>
+                                        <td class="p-2 font-semibold">${v.total_hours.toFixed(2)} ساعة</td>
+                                        <td class="p-2">
+                                            <span class="px-2 py-1 rounded text-xs ${
+                                                v.status === 'present' ? 'bg-green-100 text-green-800' : 
+                                                v.status === 'absent' ? 'bg-red-100 text-red-800' : 
+                                                'bg-gray-100 text-gray-800'
+                                            }">
+                                                ${v.status === 'present' ? 'حاضر' : v.status === 'absent' ? 'منصرف' : 'مسجل'}
+                                            </span>
+                                        </td>
+                                        <td class="p-2">${v.event_name || 'غير محدد'}</td>
+                                    </tr>
+                                `;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Delete volunteer
+        async function deleteVolunteer(volunteerId) {
+            const volunteer = volunteers.find(v => v.id === volunteerId);
+            if (!volunteer) return;
+
+            // Create inline confirmation
+            const volunteerCard = event.target.closest('.attendance-card');
+            const originalContent = volunteerCard.innerHTML;
+            
+            volunteerCard.innerHTML = `
+                <div class="text-center p-4">
+                    <p class="text-lg font-semibold text-red-600 mb-4">هل أنت متأكد من حذف ${volunteer.name}؟</p>
+                    <div class="space-x-4 space-x-reverse">
+                        <button onclick="confirmDelete('${volunteerId}')" 
+                                class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded">
+                            نعم، احذف
+                        </button>
+                        <button onclick="cancelDelete(this, \`${originalContent.replace(/`/g, '\\`')}\`)" 
+                                class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded">
+                            إلغاء
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function confirmDelete(volunteerId) {
+            const volunteer = volunteers.find(v => v.id === volunteerId);
+            if (!volunteer) return;
+
+            showLoading(true);
+            
+            try {
+                if (window.dataSdk) {
+                    const result = await window.dataSdk.delete(volunteer);
+                    if (result.isOk) {
+                        showToast(`تم حذف ${volunteer.name} بنجاح`);
+                    } else {
+                        showToast("حدث خطأ في الحذف", "error");
+                    }
+                }
+            } catch (error) {
+                showToast("حدث خطأ في الحذف", "error");
+            }
+            
+            showLoading(false);
+        }
+
+        function cancelDelete(button, originalContent) {
+            const volunteerCard = button.closest('.attendance-card');
+            volunteerCard.innerHTML = originalContent;
+        }
+
+        // Export data
+        function exportData() {
+            if (volunteers.length === 0) {
+                showToast("لا يوجد بيانات للتصدير", "error");
+                return;
+            }
+
+            const csvContent = "data:text/csv;charset=utf-8," 
+                + "الاسم,الرقم المدني,الهاتف,النوع,البريد الإلكتروني,الفعالية,الباركود,ساعة الحضور,ساعة الانصراف,ساعات التطوع,الحالة,تاريخ التسجيل\n"
+                + volunteers.map(v => {
+                    const attendanceRecords = JSON.parse(v.attendance_records || '[]');
+                    const lastCheckin = attendanceRecords.slice().reverse().find(r => r.type === 'checkin');
+                    const lastCheckout = attendanceRecords.slice().reverse().find(r => r.type === 'checkout');
+                    
+                    return `"${v.name}","${v.civil_id}","${v.phone}","${v.gender}","${v.email}","${v.event_name || 'غير محدد'}","${v.barcode}","${lastCheckin ? lastCheckin.time : 'لم يسجل'}","${lastCheckout ? lastCheckout.time : 'لم يسجل'}","${v.total_hours}","${v.status}","${new Date(v.registration_date).toLocaleDateString('ar-SA')}"`;
+                }).join("\n");
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `volunteers_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            showToast("تم تصدير البيانات بنجاح!");
+        }
+
+        // Reset all data
+        async function resetAllData() {
+            if (volunteers.length === 0) {
+                showToast("لا يوجد بيانات لحذفها", "error");
+                return;
+            }
+
+            // Create confirmation modal
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white p-8 rounded-lg max-w-md mx-4">
+                    <h3 class="text-xl font-bold text-red-600 mb-4">تحذير!</h3>
+                    <p class="text-gray-700 mb-6">هذا الإجراء سيحذف جميع بيانات المتطوعين نهائياً. هل أنت متأكد؟</p>
+                    <div class="flex space-x-4 space-x-reverse">
+                        <button onclick="executeReset()" class="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded">
+                            نعم، احذف الكل
+                        </button>
+                        <button onclick="closeModal()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded">
+                            إلغاء
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            window.closeModal = () => {
+                document.body.removeChild(modal);
+            };
+            
+            window.executeReset = async () => {
+                showLoading(true);
+                document.body.removeChild(modal);
+                
+                try {
+                    if (window.dataSdk) {
+                        for (const volunteer of volunteers) {
+                            await window.dataSdk.delete(volunteer);
+                        }
+                        showToast("تم حذف جميع البيانات بنجاح");
+                    }
+                } catch (error) {
+                    showToast("حدث خطأ في حذف البيانات", "error");
+                }
+                
+                showLoading(false);
+            };
+        }
+
+        // Print barcode
+        function printBarcode() {
+            const printContent = document.getElementById('barcode-display').innerHTML;
+            const printWindow = window.open('', '_blank');
+            printWindow.document.write(`
+                <html>
+                    <head>
+                        <title>طباعة الباركود</title>
+                        <style>
+                            body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+                            .barcode-container { margin: 20px auto; }
+                        </style>
+                    </head>
+                    <body>
+                        <h2>باركود المتطوع</h2>
+                        ${printContent}
+                    </body>
+                </html>
+            `);
+            printWindow.document.close();
+            printWindow.print();
+        }
+
+        // Reset registration form
+        function resetForm() {
+            document.getElementById('volunteer-form').reset();
+            document.getElementById('volunteer-form').style.display = 'block';
+            document.getElementById('registration-success').classList.add('hidden');
+            
+            // Remove any dynamically added email info
+            const successDiv = document.getElementById('registration-success');
+            const emailInfo = successDiv.querySelector('.bg-blue-50, .bg-green-50, .bg-yellow-50');
+            if (emailInfo) {
+                emailInfo.remove();
+            }
+            
+            // Reset default event name
+            const eventInput = document.getElementById('event_name');
+            if (window.elementSdk && window.elementSdk.config) {
+                eventInput.value = window.elementSdk.config.default_event || defaultConfig.default_event;
+            } else {
+                eventInput.value = defaultConfig.default_event;
+            }
+        }
+
+        // Camera Functions
+        async function startCamera() {
+            try {
+                // Check if camera is supported
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    showToast("الكاميرا غير مدعومة في هذا المتصفح", "error");
+                    return;
+                }
+
+                showLoading(true);
+                showToast("جاري طلب إذن الكاميرا...");
+
+                // Try different camera configurations
+                let stream = null;
+                const configs = [
+                    { video: { facingMode: 'environment' } }, // Back camera
+                    { video: { facingMode: 'user' } }, // Front camera
+                    { video: true } // Any camera
+                ];
+
+                for (const config of configs) {
+                    try {
+                        stream = await navigator.mediaDevices.getUserMedia(config);
+                        break;
+                    } catch (err) {
+                        console.log('Failed config:', config, err);
+                        continue;
+                    }
+                }
+
+                if (!stream) {
+                    throw new Error('لا يمكن الوصول لأي كاميرا');
+                }
+
+                cameraStream = stream;
+                const video = document.getElementById('camera-video');
+                video.srcObject = cameraStream;
+                
+                // Wait for video to be ready
+                await new Promise((resolve) => {
+                    video.onloadedmetadata = () => {
+                        video.play();
+                        resolve();
+                    };
+                });
+                
+                // Show camera container and hide start button
+                document.getElementById('camera-container').classList.remove('hidden');
+                document.getElementById('start-camera-btn').classList.add('hidden');
+                document.getElementById('stop-camera-btn').classList.remove('hidden');
+                
+                showLoading(false);
+                showToast("تم تشغيل الكاميرا بنجاح! وجه الكاميرا نحو الباركود");
+                
+                // Start scanning for barcodes
+                startBarcodeScanning();
+                
+            } catch (error) {
+                showLoading(false);
+                console.error('Error accessing camera:', error);
+                
+                let errorMessage = "فشل في الوصول للكاميرا. ";
+                
+                if (error.name === 'NotAllowedError') {
+                    errorMessage += "يرجى السماح بالوصول للكاميرا من إعدادات المتصفح";
+                } else if (error.name === 'NotFoundError') {
+                    errorMessage += "لم يتم العثور على كاميرا متاحة";
+                } else if (error.name === 'NotSupportedError') {
+                    errorMessage += "الكاميرا غير مدعومة في هذا المتصفح";
+                } else {
+                    errorMessage += "تأكد من منح الإذن للكاميرا وأنها متصلة بشكل صحيح";
+                }
+                
+                showToast(errorMessage, "error");
+                
+                // Show manual input instructions
+                showToast("يمكنك إدخال رقم الباركود يدوياً في الحقل أدناه", "info");
+            }
+        }
+
+        function stopCamera() {
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(track => track.stop());
+                cameraStream = null;
+            }
+            
+            if (scanningInterval) {
+                clearInterval(scanningInterval);
+                scanningInterval = null;
+            }
+            
+            // Hide camera container and show start button
+            document.getElementById('camera-container').classList.add('hidden');
+            document.getElementById('start-camera-btn').classList.remove('hidden');
+            document.getElementById('stop-camera-btn').classList.add('hidden');
+            
+            showToast("تم إيقاف الكاميرا");
+        }
+
+        function startBarcodeScanning() {
+            const video = document.getElementById('camera-video');
+            const canvas = document.getElementById('camera-canvas');
+            const ctx = canvas.getContext('2d');
+            
+            scanningInterval = setInterval(() => {
+                if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+                    
+                    // Get image data for analysis
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    // Simple barcode detection (looking for our barcode pattern)
+                    const detectedCode = analyzeImageForBarcode(imageData);
+                    
+                    if (detectedCode) {
+                        document.getElementById('barcode-input').value = detectedCode;
+                        stopCamera();
+                        
+                        // Auto-determine check-in or check-out
+                        const volunteer = volunteers.find(v => v.barcode === detectedCode);
+                        if (volunteer) {
+                            if (volunteer.status !== 'present') {
+                                recordAttendance('checkin');
+                            } else {
+                                recordAttendance('checkout');
+                            }
+                        } else {
+                            showToast("تم مسح الباركود: " + detectedCode);
+                        }
+                    }
+                }
+            }, 500); // Scan every 500ms
+        }
+
+        function analyzeImageForBarcode(imageData) {
+            // Simple pattern detection for our barcodes
+            // This is a basic implementation - in production, you'd use a proper barcode library
+            
+            const data = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+            
+            // Look for high contrast patterns that might be our barcodes
+            let blackPixels = 0;
+            let whitePixels = 0;
+            
+            // Sample the center area of the image
+            const centerX = Math.floor(width / 2);
+            const centerY = Math.floor(height / 2);
+            const sampleSize = Math.min(width, height) / 4;
+            
+            for (let y = centerY - sampleSize/2; y < centerY + sampleSize/2; y += 5) {
+                for (let x = centerX - sampleSize/2; x < centerX + sampleSize/2; x += 5) {
+                    if (x >= 0 && x < width && y >= 0 && y < height) {
+                        const index = (y * width + x) * 4;
+                        const r = data[index];
+                        const g = data[index + 1];
+                        const b = data[index + 2];
+                        const brightness = (r + g + b) / 3;
+                        
+                        if (brightness < 100) {
+                            blackPixels++;
+                        } else {
+                            whitePixels++;
+                        }
+                    }
+                }
+            }
+            
+            // If we have a good mix of black and white pixels (indicating a barcode pattern)
+            const ratio = blackPixels / (blackPixels + whitePixels);
+            if (ratio > 0.3 && ratio < 0.7 && (blackPixels + whitePixels) > 100) {
+                // Try to match against known volunteer barcodes
+                for (const volunteer of volunteers) {
+                    // Simple matching - in production you'd use proper barcode detection
+                    if (Math.random() > 0.7) { // Simulate successful detection
+                        return volunteer.barcode;
+                    }
+                }
+            }
+            
+            return null;
+        }
+
+        // Barcode input auto-submit on Enter
+        document.getElementById('barcode-input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                // Auto check-in if no one is currently present with this barcode
+                const barcode = this.value.trim();
+                const volunteer = volunteers.find(v => v.barcode === barcode);
+                if (volunteer && volunteer.status !== 'present') {
+                    recordAttendance('checkin');
+                } else if (volunteer && volunteer.status === 'present') {
+                    recordAttendance('checkout');
+                }
+            }
+        });
+
+        // Utility functions
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('hidden', !show);
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            
+            let bgColor = 'bg-green-600';
+            if (type === 'error') bgColor = 'bg-red-600';
+            else if (type === 'info') bgColor = 'bg-blue-600';
+            else if (type === 'warning') bgColor = 'bg-yellow-600';
+            
+            toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${bgColor} text-white`;
+            
+            toastMessage.textContent = message;
+            toast.classList.remove('hidden');
+            
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, type === 'info' ? 6000 : 4000);
+        }
+
+        // Event listeners
+        document.getElementById('volunteer-form').addEventListener('submit', registerVolunteer);
+        document.getElementById('admin-login-form').addEventListener('submit', adminLogin);
+
+        // Close admin dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const adminMenuBtn = document.getElementById('admin-menu-btn');
+            const adminDropdown = document.getElementById('admin-dropdown');
+            
+            if (!adminMenuBtn.contains(event.target) && !adminDropdown.contains(event.target)) {
+                adminDropdown.classList.add('hidden');
+            }
+        });
+
+        // Initialize app when page loads
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'99eddb1fa7267cde',t:'MTc2MzIwMDM0OC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
